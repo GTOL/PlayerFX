@@ -8,6 +8,22 @@
 	<packaging>jar</packaging>
 
 	<name>PlayerFX</name>
+	
+	<developers>
+		<developer>
+			<name>GTOL</name>
+			<email>gtol.me@gmail.com</email>
+		</developer>
+	</developers>
+	
+	<licenses>
+		<license>
+			<name>The MIT License</name>
+			<url>https://opensource.org/licenses/MIT</url>
+		</license>
+	</licenses>
+	
+	<url>https://github.com/GTOL/PlayerFX</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -45,6 +61,9 @@
 				<includes>
 					<include>**/*.fxml</include>
 				</includes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
 			</resource>
 		</resources>
 		<plugins>

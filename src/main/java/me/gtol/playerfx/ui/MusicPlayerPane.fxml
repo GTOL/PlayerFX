@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.BorderPane?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="me.gtol.playerfx.ui.MusicPlayerPane">
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:id="musicPlayerPane" fx:controller="me.gtol.playerfx.ui.MusicPlayerPane">
 	<top>
 		<SplitMenuButton fx:id="load" text="Load" onAction="#loadClicked">
 			<items>

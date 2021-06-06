@@ -3,6 +3,7 @@ package me.gtol.playerfx.ui;
 import java.io.File;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
@@ -17,6 +18,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.SplitMenuButton;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaPlayer.Status;
@@ -27,6 +29,9 @@ import me.gtol.playerfx.main.PlayerFX;
 
 public class MusicPlayerPane implements Initializable {
 	MediaPlayer player;
+
+	@FXML
+	BorderPane musicPlayerPane;
 
 	@FXML
 	SplitMenuButton load;
@@ -52,8 +57,10 @@ public class MusicPlayerPane implements Initializable {
 	@FXML
 	Label totalTimeLabel;
 
+	private PlayerFX main;
+
 	private ListChangeListener<Path> recentFilesListener = change -> {
-		updateRecentFiles(change.getList());
+		showRecentFiles(change.getList());
 	};
 
 	@Override
@@ -86,8 +93,9 @@ public class MusicPlayerPane implements Initializable {
 	}
 
 	public void setMain(PlayerFX main) {
+		this.main = main;
 		main.getPrimaryModel().getRecentFiles().addListener(new WeakListChangeListener<>(recentFilesListener));
-		updateRecentFiles(main.getPrimaryModel().getRecentFiles());
+		showRecentFiles(main.getPrimaryModel().getRecentFiles());
 	}
 
 	@FXML
@@ -95,51 +103,12 @@ public class MusicPlayerPane implements Initializable {
 		FileChooser chooser = new FileChooser();
 		chooser.setTitle("Open");
 		chooser.getExtensionFilters().addAll(new ExtensionFilter("Audio Files", "*.wav", "*.mp3", "*.m4a"));
-		File file = new File(
-				"C:\\Users\\GT\\Music\\iTunes\\iTunes Media\\Music\\Coldplay\\Live 2012\\09 Viva la Vida (Live).m4a");
-		Media media = new Media(file.toURI().toString());
-		if (player != null) {
-			player.dispose();
-		}
-		player = new MediaPlayer(media);
-		player.volumeProperty().bind(volumeSlider.valueProperty());
 
-		player.setOnReady(() -> {
-			final Duration duration = player.getMedia().getDuration();
-			timeSlider.setMax(duration.toMillis());
-			totalTimeLabel.setText(duration2str(duration));
-			player.currentTimeProperty().addListener(ob -> {
-				if (!timeSlider.isValueChanging()) {
-					timeSlider.setValue(player.getCurrentTime().toMillis());
-					currentTimeLabel.setText(duration2str(player.getCurrentTime()));
-				}
-			});
+		File mediaFile = chooser.showOpenDialog(musicPlayerPane.getScene().getWindow());
+		if (mediaFile == null)
+			return;
 
-			player.statusProperty().addListener((ob, o, n) -> {
-				if (n == Status.PLAYING) {
-					play.setText("Pause");
-				} else {
-					play.setText("Play");
-				}
-			});
-
-			player.muteProperty().addListener((ob, o, n) -> {
-				if (n) {
-					mute.setText("Unmute");
-				} else {
-					mute.setText("Mute");
-				}
-			});
-
-			player.setOnEndOfMedia(() -> {
-				if (player.getCurrentCount() == player.getCycleCount()) {
-					player.stop();
-					player.seek(Duration.ZERO);
-				}
-			});
-
-			player.play();
-		});
+		load(mediaFile);
 	}
 
 	@FXML
@@ -153,7 +122,61 @@ public class MusicPlayerPane implements Initializable {
 		}
 	}
 
-	private String duration2str(Duration duration) {
+	@FXML
+	public void muteClicked() {
+		if (player != null) {
+			player.setMute(!player.isMute());
+		}
+	}
+
+	private void load(File mediaFile) {
+		main.updateRecentFiles(mediaFile.toPath());
+		Media media = new Media(mediaFile.toURI().toString());
+		if (player != null) {
+			player.dispose();
+		}
+		player = new MediaPlayer(media);
+		player.volumeProperty().bind(volumeSlider.valueProperty());
+		player.statusProperty().addListener((ob, o, n) -> {
+			if (n == Status.PLAYING) {
+				play.setText("Pause");
+			} else {
+				play.setText("Play");
+			}
+		});
+
+		player.muteProperty().addListener((ob, o, n) -> {
+			if (n) {
+				mute.setText("Unmute");
+			} else {
+				mute.setText("Mute");
+			}
+		});
+
+		player.setOnEndOfMedia(() -> {
+			if (player.getCurrentCount() == player.getCycleCount()) {
+				player.stop();
+				player.seek(Duration.ZERO);
+			}
+		});
+
+		player.setOnReady(() -> {
+			final Duration duration = player.getMedia().getDuration();
+			timeSlider.setMax(duration.toMillis());
+			totalTimeLabel.setText(duration2Str(duration));
+
+			player.currentTimeProperty().addListener(ob -> {
+				if (!timeSlider.isValueChanging()) {
+					timeSlider.setValue(player.getCurrentTime().toMillis());
+					currentTimeLabel.setText(duration2Str(player.getCurrentTime()));
+				}
+			});
+
+			player.play();
+		});
+	}
+
+	private String duration2Str(Duration duration) {
 		if (duration.toHours() > 1) {
 			int hours = (int) duration.toHours();
 			int minutes = (int) (duration.toMinutes() % 60);
@@ -166,17 +189,15 @@ public class MusicPlayerPane implements Initializable {
 		}
 	}
 
-	@FXML
-	public void muteClicked() {
-		if (player != null) {
-			player.setMute(!player.isMute());
+	private void showRecentFiles(List<? extends Path> recentFiles) {
+		List<MenuItem> items = new ArrayList<>();
+		for (final Path p : recentFiles) {
+			MenuItem item = new MenuItem(p.getFileName().toString());
+			item.setOnAction(ae -> {
+				load(p.toFile());
+			});
+			items.add(item);
 		}
-	}
-
-	private void updateRecentFiles(List<? extends Path> recentFiles) {
-		List<MenuItem> items = recentFiles.stream()
-				.map(p -> new MenuItem(p.getFileName().toString()))
-				.collect(Collectors.toList());
 		load.getItems().setAll(items);
 		load.getItems().add(new SeparatorMenuItem());
 		load.getItems().add(clearHistory);

@@ -44,8 +44,8 @@ public class PlayerFX {
 		queue.remove(recentFile);
 		if (queue.size() == 20) {
 			queue.pollLast();
-			queue.offerFirst(recentFile);
 		}
+		queue.offerFirst(recentFile);
 		primaryModel.getRecentFiles().setAll(queue);
 	}
 }
