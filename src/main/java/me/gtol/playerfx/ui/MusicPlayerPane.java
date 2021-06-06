@@ -2,25 +2,37 @@ package me.gtol.playerfx.ui;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
 
+import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Slider;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaPlayer.Status;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.util.Duration;
+import me.gtol.playerfx.main.PlayerFX;
 
 public class MusicPlayerPane implements Initializable {
 	MediaPlayer player;
 
 	@FXML
-	Button load;
+	SplitMenuButton load;
+
+	@FXML
+	MenuItem clearHistory;
 
 	@FXML
 	Button play;
@@ -30,7 +42,7 @@ public class MusicPlayerPane implements Initializable {
 
 	@FXML
 	Button mute;
-	
+
 	@FXML
 	Slider volumeSlider;
 
@@ -40,8 +52,13 @@ public class MusicPlayerPane implements Initializable {
 	@FXML
 	Label totalTimeLabel;
 
+	private ListChangeListener<Path> recentFilesListener = change -> {
+		updateRecentFiles(change.getList());
+	};
+
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
+
 		// 当时间轴被拖动后，调整播放时间
 		timeSlider.valueChangingProperty().addListener((ob, o, n) -> {
 			if (player != null) {
@@ -66,6 +83,11 @@ public class MusicPlayerPane implements Initializable {
 			if (player != null && player.isMute())
 				player.setMute(false);
 		});
+	}
+
+	public void setMain(PlayerFX main) {
+		main.getPrimaryModel().getRecentFiles().addListener(new WeakListChangeListener<>(recentFilesListener));
+		updateRecentFiles(main.getPrimaryModel().getRecentFiles());
 	}
 
 	@FXML
@@ -100,7 +122,7 @@ public class MusicPlayerPane implements Initializable {
 					play.setText("Play");
 				}
 			});
-			
+
 			player.muteProperty().addListener((ob, o, n) -> {
 				if (n) {
 					mute.setText("Unmute");
@@ -149,5 +171,15 @@ public class MusicPlayerPane implements Initializable {
 		if (player != null) {
 			player.setMute(!player.isMute());
 		}
+	}
+
+	private void updateRecentFiles(List<? extends Path> recentFiles) {
+		List<MenuItem> items = recentFiles.stream()
+				.map(p -> new MenuItem(p.getFileName().toString()))
+				.collect(Collectors.toList());
+		load.getItems().setAll(items);
+		load.getItems().add(new SeparatorMenuItem());
+		load.getItems().add(clearHistory);
+		clearHistory.setDisable(items.isEmpty());
 	}
 }
